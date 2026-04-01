@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>thatguysoto's Instagram Carousel Slicer - Version 1</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1e232d;
+      --text: #f5f7fb;
+      --muted: #aab2c0;
+      --line: #2e3441;
+      --accent: #ffffff;
+      --danger: #ff6b6b;
+      --good: #86efac;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: linear-gradient(180deg, #0b0d12 0%, #11151d 100%);
+      color: var(--text);
+    }
+    .wrap { max-width: 1200px; margin: auto; padding: 24px; }
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    .small { font-size: 12px; color: var(--muted); }
+    .panel { background: #171a21; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    input, select, button { width: 100%; margin-top: 6px; padding: 10px; border-radius: 8px; border: 1px solid #333; background:#1e232d; color:white;}
+    canvas { max-width:100%; border-radius:12px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>thatguysoto's Instagram Carousel Slicer</h1>
+  <p class="small">Version 1 • thatguysoto.com • @thatguysoto.media</p>
+
+  <div class="panel">
+    <label>Upload Image</label>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <label>Slides</label>
+    <select id="sliceCount">
+      <option >2</option>
+<option selected>3</option>
+<option >4</option>
+<option >5</option>
+<option >6</option>
+<option >7</option>
+<option >8</option>
+<option >9</option>
+<option >10</option>
+<option >11</option>
+<option >12</option>
+<option >13</option>
+<option >14</option>
+<option >15</option>
+<option >16</option>
+<option >17</option>
+<option >18</option>
+<option >19</option>
+<option >20</option>
+    </select>
+
+    <label>Zoom</label>
+    <input type="range" id="zoom" min="0.5" max="3" step="0.01" value="1">
+
+    <button onclick="downloadZip()">Download ZIP</button>
+  </div>
+
+  <div class="panel">
+    <canvas id="preview"></canvas>
+  </div>
+</div>
+
+<script>
+let img = null;
+
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const image = new Image();
+  image.onload = ()=>{
+    img = image;
+    render();
+  };
+  image.src = URL.createObjectURL(file);
+});
+
+function render(){
+  if(!img) return;
+  const canvas = document.getElementById('preview');
+  const ctx = canvas.getContext('2d');
+
+  const count = Number(document.getElementById('sliceCount').value);
+  const zoom = Number(document.getElementById('zoom').value);
+
+  const width = 1080;
+  const height = 1350;
+
+  canvas.width = width * count;
+  canvas.height = height;
+
+  const scale = Math.max(canvas.width/img.width, canvas.height/img.height) * zoom;
+  const drawW = img.width * scale;
+  const drawH = img.height * scale;
+
+  ctx.drawImage(img, 0, 0, drawW, drawH);
+
+  window.slices = [];
+
+  for(let i=0;i<count;i++){
+    const c = document.createElement('canvas');
+    c.width = width;
+    c.height = height;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(canvas, i*width,0,width,height,0,0,width,height);
+    window.slices.push(c.toDataURL());
+  }
+}
+
+async function downloadZip(){
+  if(!window.slices) return;
+  const zip = new JSZip();
+  window.slices.forEach((data,i)=>{
+    zip.file(`slide_${i+1}.png`, data.split(',')[1], {base64:true});
+  });
+  const blob = await zip.generateAsync({type:'blob'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "carousel_v1.zip";
+  a.click();
+}
+</script>
+</body>
+</html>
