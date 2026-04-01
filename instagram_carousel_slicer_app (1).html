@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>thatguysoto's Instagram Carousel Slicer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1e232d;
+      --text: #f5f7fb;
+      --muted: #aab2c0;
+      --line: #2e3441;
+      --accent: #ffffff;
+      --danger: #ff6b6b;
+      --good: #86efac;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #0b0d12 0%, #11151d 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(23, 26, 33, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(10px);
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+      color: #fff;
+      letter-spacing: 0.01em;
+    }
+
+    .group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input[type="file"], select, input[type="number"], button {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: white;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .btn {
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn.primary {
+      background: #fff;
+      color: #111;
+      border-color: #fff;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .preview-shell {
+      display: grid;
+      gap: 14px;
+    }
+
+    .canvas-wrap {
+      background: #0a0c10;
+      border: 1px dashed #3a4150;
+      border-radius: 22px;
+      padding: 18px;
+      display: grid;
+      justify-items: center;
+      overflow: auto;
+      min-height: 360px;
+    }
+
+    canvas#mainPreview {
+      max-width: 100%;
+      height: auto;
+      border-radius: 16px;
+      background: #000;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .thumbs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+    }
+
+    .thumb {
+      background: #10141b;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 10px;
+    }
+
+    .thumb img {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      background: #000;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+    }
+
+    .thumb .meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #121720;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .help {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+
+    .good { color: var(--good); }
+    .warn { color: #facc15; }
+    .danger { color: var(--danger); }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>thatguysoto's Instagram Carousel Slicer</h1>
+      <p class="small" style="margin: 0 0 10px; color: var(--muted);">
+        <a href="https://thatguysoto.com" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">thatguysoto.com</a>
+        &nbsp;•&nbsp;
+        <a href="https://www.instagram.com/thatguysoto.media/" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">@thatguysoto.media</a>
+      </p>
+      <p class="sub">Upload one image, split it into multiple Instagram-ready slides, preview the sequence, then download all slices at once. Built for panoramas, banners, and multi-post swipe layouts.</p>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Settings</h2>
+
+        <div class="group">
+          <label for="fileInput">Upload image</label>
+          <input id="fileInput" type="file" accept="image/*" />
+        </div>
+
+        <div class="row">
+          <div class="group">
+            <label for="aspectPreset">Post format</label>
+            <select id="aspectPreset">
+              <option value="4:5" selected>Portrait 4:5 (1080×1350)</option>
+              <option value="3:4">Portrait 3:4 (1080×1440)</option>
+              <option value="1:1">Square 1:1 (1080×1080)</option>
+              <option value="1.91:1">Landscape 1.91:1 (1080×566)</option>
+              <option value="16:9">Landscape 16:9 (1080×608)</option>
+            </select>
+          </div>
+          <div class="group">
+            <label for="sliceCount">Number of slides</label>
+            <select id="sliceCount">
+              <option>2</option>
+              <option selected>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+              <option>11</option>
+              <option>12</option>
+              <option>13</option>
+              <option>14</option>
+              <option>15</option>
+              <option>16</option>
+              <option>17</option>
+              <option>18</option>
+              <option>19</option>
+              <option>20</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="group">
+            <label for="fitMode">Fit mode</label>
+            <select id="fitMode">
+              <option value="cover" selected>Cover</option>
+              <option value="contain">Contain</option>
+            </select>
+          </div>
+          <div class="group">
+            <label for="outputScale">Output size</label>
+            <select id="outputScale">
+              <option value="1080" selected>1080 px wide</option>
+              <option value="1440">1440 px wide</option>
+              <option value="2160">2160 px wide</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="group">
+          <label for="zoomRange">Zoom</label>
+          <div class="row">
+            <input id="zoomRange" type="range" min="0.5" max="3" step="0.01" value="1" />
+            <input id="zoomInput" type="number" min="0.5" max="3" step="0.01" value="1" />
+          </div>
+          <div class="small">Use zoom to crop tighter or pull back.</div>
+        </div>
+
+        <div class="group">
+          <label for="xRange">Horizontal position</label>
+          <div class="row">
+            <input id="xRange" type="range" min="0" max="100" step="0.1" value="50" />
+            <input id="xInput" type="number" min="0" max="100" step="0.1" value="50" />
+          </div>
+        </div>
+
+        <div class="group">
+          <label for="yRange">Vertical position</label>
+          <div class="row">
+            <input id="yRange" type="range" min="0" max="100" step="0.1" value="50" />
+            <input id="yInput" type="number" min="0" max="100" step="0.1" value="50" />
+          </div>
+        </div>
+
+        <div class="group row">
+          <button class="btn primary" id="downloadZipBtn" disabled>Download ZIP</button>
+        </div>
+
+        <div class="group row">
+          <button class="btn ghost" id="resetViewBtn" disabled>Reset View</button>
+        </div>
+
+        <div class="status" id="statusText"></div>
+
+        <div class="help">
+          <strong>Best use case</strong><br>
+          Wide artwork, banners, or stitched compositions.
+
+          <br><br>
+
+          <strong>Carousel limits</strong><br>
+          Instagram supports up to 20 images per post, allowing you to extend your layout across multiple slides.
+
+          <br><br>
+
+          <strong>Seamless layout</strong><br>
+          Keep every slide the same aspect ratio and align your composition across each frame for a smooth swipe.
+
+          <br><br>
+
+          <strong>Aspect ratios</strong><br>
+          Supported feed formats range from 1.91:1 (landscape) to 4:5 or 3:4 (vertical). Choose based on how much screen space you want to occupy.
+        </div>
+      </div>
+
+      <div class="preview-shell">
+        <div class="panel">
+          <div class="pill">Preview shows the full sliced sequence exactly as it will split</div>
+          <div class="canvas-wrap">
+            <canvas id="mainPreview" width="1080" height="1350"></canvas>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Slides</h2>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const aspectPreset = document.getElementById('aspectPreset');
+    const sliceCount = document.getElementById('sliceCount');
+    const fitMode = document.getElementById('fitMode');
+    const outputScale = document.getElementById('outputScale');
+    const zoomRange = document.getElementById('zoomRange');
+    const zoomInput = document.getElementById('zoomInput');
+    const xRange = document.getElementById('xRange');
+    const xInput = document.getElementById('xInput');
+    const yRange = document.getElementById('yRange');
+    const yInput = document.getElementById('yInput');
+    const mainPreview = document.getElementById('mainPreview');
+    const thumbs = document.getElementById('thumbs');
+    const statusText = document.getElementById('statusText');
+    const downloadZipBtn = document.getElementById('downloadZipBtn');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+
+    const state = {
+      img: null,
+      fileName: 'carousel',
+      slices: []
+    };
+
+    function getAspect() {
+      const val = aspectPreset.value;
+      if (val === '4:5') return 4 / 5;
+      if (val === '3:4') return 3 / 4;
+      if (val === '1:1') return 1;
+      if (val === '16:9') return 16 / 9;
+      return 1.91;
+    }
+
+    function getDimensions() {
+      const width = Number(outputScale.value);
+      const aspect = getAspect();
+      return { width, height: Math.round(width / aspect) };
+    }
+
+    function setStatus(text, cls = '') {
+      statusText.className = 'status ' + cls;
+      statusText.textContent = text;
+    }
+
+    function clamp(v, min, max) {
+      return Math.min(max, Math.max(min, v));
+    }
+
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    function calculateDrawRect(imgW, imgH, canvasW, canvasH, mode, zoom, posX, posY) {
+      const baseScale = mode === 'cover'
+        ? Math.max(canvasW / imgW, canvasH / imgH)
+        : Math.min(canvasW / imgW, canvasH / imgH);
+
+      const scale = baseScale * zoom;
+      const drawW = imgW * scale;
+      const drawH = imgH * scale;
+
+      const extraX = Math.max(0, drawW - canvasW);
+      const extraY = Math.max(0, drawH - canvasH);
+
+      const x = -extraX * posX;
+      const y = -extraY * posY;
+
+      return { x, y, drawW, drawH };
+    }
+
+    function syncInputsFromSliders() {
+      zoomInput.value = zoomRange.value;
+      xInput.value = xRange.value;
+      yInput.value = yRange.value;
+    }
+
+    function syncSliderFromInput(input, slider) {
+      const min = Number(slider.min);
+      const max = Number(slider.max);
+      const value = clamp(Number(input.value), min, max);
+      if (!Number.isFinite(value)) return;
+      slider.value = value;
+      input.value = value;
+    }
+
+    function render() {
+      if (!state.img) return;
+
+      const count = Number(sliceCount.value);
+      const { width: slideW, height: slideH } = getDimensions();
+      const totalW = slideW * count;
+      const totalH = slideH;
+
+      mainPreview.width = totalW;
+      mainPreview.height = totalH;
+
+      const ctx = mainPreview.getContext('2d');
+      ctx.clearRect(0, 0, totalW, totalH);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, totalW, totalH);
+
+      const zoom = Number(zoomRange.value);
+      const posX = Number(xRange.value) / 100;
+      const posY = Number(yRange.value) / 100;
+
+      syncInputsFromSliders();
+
+      const rect = calculateDrawRect(
+        state.img.width,
+        state.img.height,
+        totalW,
+        totalH,
+        fitMode.value,
+        zoom,
+        posX,
+        posY
+      );
+
+      ctx.drawImage(state.img, rect.x, rect.y, rect.drawW, rect.drawH);
+
+      for (let i = 1; i < count; i++) {
+        ctx.beginPath();
+        ctx.moveTo(slideW * i + 0.5, 0);
+        ctx.lineTo(slideW * i + 0.5, totalH);
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      state.slices = [];
+      thumbs.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+        const c = document.createElement('canvas');
+        c.width = slideW;
+        c.height = slideH;
+        const cctx = c.getContext('2d');
+        cctx.drawImage(mainPreview, i * slideW, 0, slideW, slideH, 0, 0, slideW, slideH);
+        const dataUrl = c.toDataURL('image/png');
+        state.slices.push({ index: i + 1, canvas: c, dataUrl });
+
+        const div = document.createElement('div');
+        div.className = 'thumb';
+        div.innerHTML = `<img src="${dataUrl}" alt="Slide ${i + 1}" /><div class="meta">Slide ${i + 1}</div>`;
+        thumbs.appendChild(div);
+      }
+
+      downloadZipBtn.disabled = false;
+      resetViewBtn.disabled = false;
+      setStatus(`Generated ${count} slide${count > 1 ? 's' : ''} at ${slideW}×${slideH}.`, 'good');
+    }
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        setStatus('Loading image...');
+        const img = await loadImage(file);
+        state.img = img;
+        state.fileName = (file.name || 'carousel').replace(/\.[^.]+$/, '');
+        render();
+      } catch (err) {
+        console.error(err);
+        setStatus('Could not load that image.', 'danger');
+      }
+    });
+
+    [aspectPreset, sliceCount, fitMode, outputScale].forEach(el => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+
+    [zoomRange, xRange, yRange].forEach(el => {
+      el.addEventListener('input', () => {
+        syncInputsFromSliders();
+        render();
+      });
+      el.addEventListener('change', () => {
+        syncInputsFromSliders();
+        render();
+      });
+    });
+
+    [[zoomInput, zoomRange], [xInput, xRange], [yInput, yRange]].forEach(([input, slider]) => {
+      input.addEventListener('input', () => {
+        syncSliderFromInput(input, slider);
+        render();
+      });
+      input.addEventListener('change', () => {
+        syncSliderFromInput(input, slider);
+        render();
+      });
+    });
+
+    resetViewBtn.addEventListener('click', () => {
+      zoomRange.value = 1;
+      xRange.value = 50;
+      yRange.value = 50;
+      syncInputsFromSliders();
+      render();
+    });
+
+    
+
+    downloadZipBtn.addEventListener('click', async () => {
+      if (!state.slices.length) return;
+      try {
+        setStatus('Building ZIP file...');
+        const zip = new JSZip();
+        state.slices.forEach(({ index, dataUrl }) => {
+          const base64 = dataUrl.split(',')[1];
+          zip.file(`${state.fileName}_slide_${String(index).padStart(2, '0')}.png`, base64, { base64: true });
+        });
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${state.fileName}_instagram_carousel.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setStatus('ZIP downloaded.', 'good');
+      } catch (err) {
+        console.error(err);
+        setStatus('ZIP export failed.', 'danger');
+      }
+    });
+  </script>
+</body>
+</html>
